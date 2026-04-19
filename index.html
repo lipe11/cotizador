@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generador de Cotizaciones</title>
+
+    <!-- Pico.css CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+
+    <!-- PetiteVue CDN -->
+    <script src="https://unpkg.com/petite-vue" defer init></script>
+
+    <style>
+      :root {
+        --pico-font-size: 14px;
+      }
+
+      body {
+        background-color: var(--pico-secondary-background);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      main.container-fluid {
+        flex: 1;
+        padding-top: var(--pico-block-spacing-vertical);
+        padding-bottom: var(--pico-block-spacing-vertical);
+      }
+
+      .preview-card {
+        background: white;
+        box-shadow: var(--pico-card-sectionning-background-color) 0px 4px 12px;
+        min-height: 800px;
+        color: #333;
+        padding: 2rem;
+        border-radius: 4px;
+      }
+
+      /* Ajuste para que la vista previa parezca un documento A4 proporcional */
+      @media (min-width: 992px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+        }
+      }
+
+      header.main-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: white;
+        color: rgb(20, 51, 99);
+        margin-bottom: 0;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+
+      header.main-header strong {
+        color: rgb(20, 51, 99);
+        font-size: 1.1rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      /* Ocultar flechas de inputs numéricos y alinear a la derecha */
+      input[type='number']::-webkit-outer-spin-button,
+      input[type='number']::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input[type='number'] {
+        /* -moz-appearance: textfield; */
+        text-align: right;
+      }
+
+      /* Estilo personalizado para el botón principal */
+      .btn-print {
+        background-color: #ff5722 !important;
+        border-color: #ff5722 !important;
+        color: white !important;
+        transition:
+          transform 0.2s,
+          background-color 0.2s;
+      }
+
+      .btn-print:hover {
+        background-color: #f4511e !important;
+        transform: scale(1.05);
+      }
+
+      /* Estilo para impresión */
+      @media print {
+        body {
+          background: white;
+        }
+        header,
+        #formulario,
+        button {
+          display: none !important;
+        }
+        main.container-fluid {
+          padding: 0;
+        }
+        .preview-card {
+          box-shadow: none;
+          border: none;
+          padding: 0;
+        }
+      }
+    </style>
+  </head>
+  <body
+    v-scope="{ 
+    quote: {
+        number: '001-2024',
+        currency: 'Q',
+        customerName: '', 
+        customerAddress: '',
+        customerPhone: '',
+        date: new Date().toISOString().substr(0, 10),
+        dueDate: new Date(Date.now() + 15*24*60*60*1000).toISOString().substr(0, 10),
+        items: [{ name: '', price: 0, qty: 1, image: '' }],
+        notes: '',
+        terms: '1. Cotización válida por 15 dias a partir de la fecha de la misma.\n2. Enviar cotizacion autorizada al correo logicamayagt@gmail.com\n3. Forma de pago : Transferencia o deposito efectivo.'
+    },
+    calcSubtotal(item) {
+        const price = parseFloat(item.price) || 0;
+        const qty = parseFloat(item.qty) || 0;
+        return price * qty;
+    },
+    calcTotal() {
+        return this.quote.items.reduce((acc, item) => acc + this.calcSubtotal(item), 0);
+    },
+    formatMoney(amount) {
+        return this.quote.currency + ' ' + (Number(amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    handleImageUpload(event, item) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                item.image = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    },
+    exportJSON() {
+        const dataStr = JSON.stringify(this.quote, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const exportFileDefaultName = `cotizacion_${this.quote.number}.json`;
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+    },
+    triggerImport() {
+        this.$refs.fileInput.click();
+    },
+    importJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedQuote = JSON.parse(e.target.result);
+                if (importedQuote && typeof importedQuote === 'object' && importedQuote.items) {
+                    this.quote = importedQuote;
+                } else {
+                    alert('El archivo no parece ser una cotización válida.');
+                }
+            } catch (err) {
+                alert('Error al leer el archivo JSON.');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+}"
+  >
+    <header class="main-header">
+      <nav class="container-fluid">
+        <ul>
+          <li><strong>Generador de Cotizaciones</strong></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main class="container-fluid">
+      <div class="grid">
+        <!-- Columna Izquierda: Formulario -->
+        <section id="formulario">
+          <article>
+            <header>
+              <h5 style="margin-bottom: 0">Configuración de Cotización</h5>
+            </header>
+
+            <form @submit.prevent>
+              <div class="grid">
+                <label>
+                  No. Cotización
+                  <input type="text" v-model="quote.number" />
+                </label>
+                <label>
+                  Moneda
+                  <select v-model="quote.currency">
+                    <option value="Q">Quetzales (Q)</option>
+                    <option value="$">Dólares ($)</option>
+                    <option value="€">Euros (€)</option>
+                  </select>
+                </label>
+              </div>
+
+              <label>
+                Cliente
+                <input
+                  type="text"
+                  v-model="quote.customerName"
+                  placeholder="Nombre del cliente o empresa"
+                />
+              </label>
+              <div class="grid">
+                <label>
+                  Dirección
+                  <input
+                    type="text"
+                    v-model="quote.customerAddress"
+                    placeholder="Dirección del cliente"
+                  />
+                </label>
+                <label>
+                  Teléfono
+                  <input
+                    type="text"
+                    v-model="quote.customerPhone"
+                    placeholder="Tel. de contacto"
+                  />
+                </label>
+              </div>
+
+              <div class="grid">
+                <label>
+                  Fecha de emisión
+                  <input type="date" v-model="quote.date" />
+                </label>
+                <label>
+                  Vence el
+                  <input type="date" v-model="quote.dueDate" />
+                </label>
+              </div>
+
+              <hr />
+
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 1rem;
+                "
+              >
+                <h6 style="margin: 0">Ítems de Servicio</h6>
+                <button
+                  type="button"
+                  class="outline contrast"
+                  style="padding: 0.2rem 0.5rem; font-size: 0.8rem"
+                  @click="quote.items.push({ name: '', price: 0, qty: 1, image: '' })"
+                >
+                  + Agregar producto
+                </button>
+              </div>
+
+              <div
+                v-for="(item, index) in quote.items"
+                :key="index"
+                style="
+                  margin-bottom: 1rem;
+                  border: 1px solid var(--pico-muted-border-color);
+                  padding: 1rem;
+                  border-radius: 8px;
+                  position: relative;
+                "
+              >
+                <div style="position: absolute; top: 0.5rem; right: 0.5rem">
+                  <a
+                    href="#"
+                    style="
+                      color: var(--pico-error-color);
+                      text-decoration: none;
+                    "
+                    @click.prevent="quote.items.splice(index, 1)"
+                    v-if="quote.items.length > 1"
+                    title="Eliminar"
+                    >✕</a
+                  >
+                </div>
+
+                <label>
+                  Producto / Servicio
+                  <input
+                    type="text"
+                    v-model="item.name"
+                    placeholder="Ej: Consultoría"
+                  />
+                </label>
+
+                <div class="grid">
+                  <label>
+                    Imagen
+                    <input
+                      type="file"
+                      @change="handleImageUpload($event, item)"
+                      accept="image/*"
+                      style="font-size: 0.8rem"
+                    />
+                  </label>
+                  <div
+                    v-if="item.image"
+                    style="display: flex; align-items: center; gap: 0.5rem"
+                  >
+                    <img
+                      :src="item.image"
+                      style="
+                        height: 40px;
+                        width: 40px;
+                        object-fit: cover;
+                        border-radius: 4px;
+                        border: 1px solid #ccc;
+                      "
+                    />
+                    <a
+                      href="#"
+                      style="color: var(--pico-error-color); font-size: 0.7rem"
+                      @click.prevent="item.image = ''"
+                      >Quitar</a
+                    >
+                  </div>
+                </div>
+
+                <div class="grid">
+                  <label>
+                    Cant.
+                    <input type="number" v-model.number="item.qty" min="0" />
+                  </label>
+                  <label>
+                    Precio Unit.
+                    <input
+                      type="number"
+                      v-model.number="item.price"
+                      min="0"
+                      step="0.01"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <hr />
+
+              <label>
+                Notas
+                <textarea
+                  v-model="quote.notes"
+                  placeholder="Información extra..."
+                ></textarea>
+              </label>
+
+              <label>
+                Términos y Condiciones
+                <textarea v-model="quote.terms" rows="6"></textarea>
+              </label>
+            </form>
+          </article>
+        </section>
+
+        <!-- Columna Derecha: Vista Previa -->
+        <section id="vista-previa">
+          <div class="preview-card">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 3rem;
+              "
+            >
+              <div style="text-align: left">
+                <img
+                  src="logo.png"
+                  alt="Logo"
+                  style="max-height: 70px"
+                  onerror="this.style.display = 'none'"
+                />
+              </div>
+              <div style="text-align: right; margin-top: -12px">
+                <h2
+                  style="
+                    color: rgb(20, 51, 99);
+                    margin-bottom: 0;
+                    margin-top: 0;
+                    line-height: 1.1;
+                  "
+                >
+                  COTIZACIÓN
+                </h2>
+                <small>Nº {{ quote.number }}</small>
+              </div>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 2rem;
+              "
+            >
+              <div style="flex: 1">
+                <small style="text-transform: uppercase; color: #777"
+                  >Preparado para:</small
+                >
+                <p style="margin-bottom: 0">
+                  <strong
+                    >{{ quote.customerName || 'Nombre del Cliente' }}</strong
+                  >
+                </p>
+                <p style="font-size: 0.85rem; margin-bottom: 0; color: #555">
+                  {{ quote.customerAddress }}
+                </p>
+                <p style="font-size: 0.85rem; margin-bottom: 0; color: #555">
+                  {{ quote.customerPhone }}
+                </p>
+              </div>
+              <div style="flex: 1; text-align: right">
+                <div style="margin-bottom: 0.8rem">
+                  <small style="text-transform: uppercase; color: #777"
+                    >Fecha de emisión:</small
+                  >
+                  <p style="margin-bottom: 0">
+                    <strong>{{ quote.date }}</strong>
+                  </p>
+                </div>
+                <div>
+                  <small style="text-transform: uppercase; color: #777"
+                    >Válido hasta:</small
+                  >
+                  <p style="margin-bottom: 0">
+                    <strong>{{ quote.dueDate }}</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <table style="background: transparent">
+              <thead>
+                <tr style="background: #f4f4f4">
+                  <th style="width: 60px; background: transparent"></th>
+                  <th style="background: transparent">Descripción</th>
+                  <th style="text-align: center; background: transparent">
+                    Cant.
+                  </th>
+                  <th style="text-align: right; background: transparent">
+                    Precio
+                  </th>
+                  <th style="text-align: right; background: transparent">
+                    Subtotal
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in quote.items" style="background: transparent">
+                  <td style="background: transparent; vertical-align: middle">
+                    <img
+                      v-if="item.image"
+                      :src="item.image"
+                      style="
+                        max-width: 50px;
+                        max-height: 50px;
+                        border-radius: 4px;
+                      "
+                    />
+                  </td>
+                  <td style="background: transparent; vertical-align: middle">
+                    {{ item.name || 'Sin descripción' }}
+                  </td>
+                  <td
+                    style="
+                      text-align: center;
+                      background: transparent;
+                      vertical-align: middle;
+                    "
+                  >
+                    {{ item.qty || 0 }}
+                  </td>
+                  <td
+                    style="
+                      text-align: right;
+                      background: transparent;
+                      vertical-align: middle;
+                    "
+                  >
+                    {{ formatMoney(item.price) }}
+                  </td>
+                  <td
+                    style="
+                      text-align: right;
+                      background: transparent;
+                      vertical-align: middle;
+                    "
+                  >
+                    <strong>{{ formatMoney(calcSubtotal(item)) }}</strong>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr style="background: transparent">
+                  <td
+                    colspan="4"
+                    style="text-align: right; background: transparent"
+                  >
+                    <strong>TOTAL</strong>
+                  </td>
+                  <td
+                    style="
+                      text-align: right;
+                      border-top: 2px solid #333;
+                      background: transparent;
+                    "
+                  >
+                    <strong>{{ formatMoney(calcTotal()) }}</strong>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div v-if="quote.notes" style="margin-top: 2rem">
+              <h6>Notas</h6>
+              <p style="font-size: 0.9rem; white-space: pre-wrap">
+                {{ quote.notes }}
+              </p>
+            </div>
+
+            <div style="margin-top: 2rem; font-size: 0.8rem; color: #555">
+              <h6>Términos y Condiciones</h6>
+              <p style="white-space: pre-wrap">{{ quote.terms }}</p>
+            </div>
+          </div>
+
+          <div
+            style="
+              margin-top: 1.5rem;
+              display: flex;
+              gap: 0.5rem;
+              justify-content: flex-end;
+              flex-wrap: wrap;
+            "
+          >
+            <input
+              type="file"
+              ref="fileInput"
+              style="display: none"
+              accept=".json"
+              @change="importJSON"
+            />
+
+            <button class="secondary" @click="triggerImport">
+              <small>📁 Cargar JSON</small>
+            </button>
+
+            <button class="secondary" @click="exportJSON">
+              <small>💾 Guardar JSON</small>
+            </button>
+
+            <button class="btn-print" @click="window.print()">
+              Imprimir PDF
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      // Desactivar cambio de valor con scroll en inputs numéricos
+      document.addEventListener('wheel', function (e) {
+        if (document.activeElement.type === 'number') {
+          document.activeElement.blur()
+        }
+      })
+
+      // Seleccionar todo el texto al hacer focus en inputs
+      document.addEventListener('focusin', function (e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+          e.target.select()
+        }
+      })
+    </script>
+  </body>
+</html>
