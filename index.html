@@ -70,6 +70,15 @@
         text-transform: uppercase;
       }
 
+      label {
+        color: #546e7a;
+        font-weight: bold;
+        font-size: 0.75rem;
+        margin-bottom: 0.3rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
       input[type='number']::-webkit-outer-spin-button,
       input[type='number']::-webkit-inner-spin-button {
         -webkit-appearance: none;
@@ -138,11 +147,11 @@
     </style>
   </head>
   <body
-    v-scope="{ 
+    v-scope="{
     quote: {
-        number: '001-2024',
+        number: '001-2026',
         currency: 'Q',
-        customerName: '', 
+        customerName: '',
         customerAddress: '',
         customerPhone: '',
         date: new Date().toISOString().substr(0, 10),
@@ -150,8 +159,7 @@
         items: [{ name: '', price: 0, qty: 1, image: '' }],
         notes: '',
         terms: '1. Cotización válida por 15 dias a partir de la fecha de la misma.\n2. Enviar cotizacion autorizada al correo logicamayagt@gmail.com\n3. Forma de pago : Transferencia o deposito efectivo.'
-    },
-    calcSubtotal(item) {
+    },    calcSubtotal(item) {
         const price = parseFloat(item.price) || 0;
         const qty = parseFloat(item.qty) || 0;
         return price * qty;
@@ -298,10 +306,10 @@
                   display: flex;
                   justify-content: space-between;
                   align-items: center;
-                  margin-bottom: 1rem;
+                  margin-bottom: 1.5rem;
                 "
               >
-                <h6 style="margin: 0">Ítems de Servicio</h6>
+                <h6 style="margin: 0; color: var(--pico-primary);">Detalle de Productos o Servicios</h6>
                 <button
                   type="button"
                   class="outline contrast"
@@ -316,36 +324,38 @@
                 v-for="(item, index) in quote.items"
                 :key="index"
                 style="
-                  margin-bottom: 1rem;
+                  margin-bottom: 2rem;
                   border: 1px solid var(--pico-muted-border-color);
-                  padding: 1rem;
+                  border-left: 6px solid rgb(20, 51, 99);
+                  padding: 1.5rem;
                   border-radius: 8px;
                   position: relative;
+                  background: white;
+                  box-shadow: 0 4px 6px rgba(0,0,0,0.04);
                 "
               >
-                <div style="position: absolute; top: 0.5rem; right: 0.5rem">
-                  <a
-                    href="#"
-                    style="
-                      color: var(--pico-error-color);
-                      text-decoration: none;
-                    "
-                    @click.prevent="quote.items.splice(index, 1)"
-                    v-if="quote.items.length > 1"
-                    title="Eliminar"
-                    >✕</a
-                  >
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                   <span style="font-weight: 800; font-size: 0.85rem; text-transform: uppercase; color: rgb(20, 51, 99); letter-spacing: 1px;">ITEM #{{ index + 1 }}</span>
+                   <a
+                     href="#"
+                     style="
+                       color: var(--pico-error-color);
+                       text-decoration: none;
+                       font-size: 0.75rem;
+                       font-weight: bold;
+                       text-transform: uppercase;
+                     "
+                     @click.prevent="quote.items.splice(index, 1)"
+                     v-if="quote.items.length > 1"
+                     title="Eliminar"
+                     >✕ Eliminar Producto</a
+                   >
                 </div>
 
                 <label>
-                  Producto / Servicio
-                  <input
-                    type="text"
-                    v-model="item.name"
-                    placeholder="Ej: Consultoría"
-                  />
+                  Nombre del producto o servicio
+                  <input type="text" v-model="item.name" placeholder="Ej: Consultoría técnica especializada" />
                 </label>
-
                 <label
                   class="drop-zone"
                   @dragover.prevent
@@ -505,77 +515,26 @@
                 <tr style="background: #f4f4f4">
                   <th style="width: 60px; background: transparent"></th>
                   <th style="background: transparent">Descripción</th>
-                  <th style="text-align: center; background: transparent">
-                    Cant.
-                  </th>
-                  <th style="text-align: right; background: transparent">
-                    Precio
-                  </th>
-                  <th style="text-align: right; background: transparent">
-                    Subtotal
-                  </th>
+                  <th style="text-align: center; background: transparent; width: 80px;">Cant.</th>
+                  <th style="text-align: right; background: transparent; width: 130px;">Precio</th>
+                  <th style="text-align: right; background: transparent; width: 140px;">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="item in quote.items" style="background: transparent">
                   <td style="background: transparent; vertical-align: middle">
-                    <img
-                      v-if="item.image"
-                      :src="item.image"
-                      style="
-                        max-width: 50px;
-                        max-height: 50px;
-                        border-radius: 4px;
-                      "
-                    />
+                    <img v-if="item.image" :src="item.image" style="max-width: 50px; max-height: 50px; border-radius: 4px;" />
                   </td>
-                  <td style="background: transparent; vertical-align: middle">
-                    {{ item.name || 'Sin descripción' }}
-                  </td>
-                  <td
-                    style="
-                      text-align: center;
-                      background: transparent;
-                      vertical-align: middle;
-                    "
-                  >
-                    {{ item.qty || 0 }}
-                  </td>
-                  <td
-                    style="
-                      text-align: right;
-                      background: transparent;
-                      vertical-align: middle;
-                    "
-                  >
-                    {{ formatMoney(item.price) }}
-                  </td>
-                  <td
-                    style="
-                      text-align: right;
-                      background: transparent;
-                      vertical-align: middle;
-                    "
-                  >
-                    <strong>{{ formatMoney(calcSubtotal(item)) }}</strong>
-                  </td>
+                  <td style="background: transparent; vertical-align: middle">{{ item.name || 'Sin descripción' }}</td>
+                  <td style="text-align: center; background: transparent; vertical-align: middle;">{{ item.qty || 0 }}</td>
+                  <td style="text-align: right; background: transparent; vertical-align: middle; white-space: nowrap;">{{ formatMoney(item.price) }}</td>
+                  <td style="text-align: right; background: transparent; vertical-align: middle; white-space: nowrap;"><strong>{{ formatMoney(calcSubtotal(item)) }}</strong></td>
                 </tr>
               </tbody>
               <tfoot>
                 <tr style="background: transparent">
-                  <td
-                    colspan="4"
-                    style="text-align: right; background: transparent"
-                  >
-                    <strong>TOTAL</strong>
-                  </td>
-                  <td
-                    style="
-                      text-align: right;
-                      border-top: 2px solid #333;
-                      background: transparent;
-                    "
-                  >
+                  <td colspan="4" style="text-align: right; background: transparent"><strong>TOTAL</strong></td>
+                  <td style="text-align: right; border-top: 2px solid #333; background: transparent; white-space: nowrap;">
                     <strong>{{ formatMoney(calcTotal()) }}</strong>
                   </td>
                 </tr>
